@@ -12,7 +12,7 @@ from receptionist.tools import CallState
 load_dotenv()
 
 # All three run on LiveKit Inference, so the LiveKit keys are the only keys needed.
-STT_MODEL = "deepgram/flux-general-en"
+STT_MODEL = "deepgram/nova-3:en"  # sends the final transcript about 0.4 s after the caller stops; Flux held it for over a second
 LLM_MODEL = "google/gemma-4-31b-it"  # lowest time to first token of the six models measured
 
 STILL_THERE_LINE = "Are you still there?"
@@ -46,7 +46,14 @@ def hang_up_on_silence(session: AgentSession) -> None:
 async def entrypoint(ctx: JobContext) -> None:
     config = load_config()  # read on every call, so a save in the admin UI applies to the next call
     state = CallState()
-    session = AgentSession(stt=STT_MODEL, llm=LLM_MODEL, tts=config.voice, userdata=state)
+    session = AgentSession(
+        stt=STT_MODEL,
+        llm=LLM_MODEL,
+        tts=config.voice,
+        userdata=state,
+        # Half a second of silence before a turn can end, so a caller can pause while dictating a number.
+        turn_handling={"endpointing": {"min_delay": 0.5}},
+    )
     hang_up_on_silence(session)
 
     async def delete_room() -> None:
