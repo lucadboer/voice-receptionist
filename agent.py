@@ -3,7 +3,15 @@
 import asyncio
 
 from dotenv import load_dotenv
-from livekit.agents import AgentServer, AgentSession, CloseEvent, JobContext, UserStateChangedEvent, cli
+from livekit.agents import (
+    AgentServer,
+    AgentSession,
+    CloseEvent,
+    ConversationItemAddedEvent,
+    JobContext,
+    UserStateChangedEvent,
+    cli,
+)
 
 from receptionist.agent import Receptionist
 from receptionist.config import load_config
@@ -32,14 +40,24 @@ def hang_up_on_silence(session: AgentSession) -> None:
         await session.say(SILENCE_GOODBYE)
         session.shutdown()
 
-    @session.on("user_state_changed")
-    def on_user_state_changed(event: UserStateChangedEvent) -> None:
+    def cancel_check_in() -> None:
         nonlocal check_in
         if check_in:
             check_in.cancel()
             check_in = None
+
+    @session.on("user_state_changed")
+    def on_user_state_changed(event: UserStateChangedEvent) -> None:
+        nonlocal check_in
+        cancel_check_in()
         if event.new_state == "away":
             check_in = asyncio.create_task(check_in_then_hang_up())
+
+    @session.on("conversation_item_added")
+    def on_message(event: ConversationItemAddedEvent) -> None:
+        # A typed message does not change the user state, so a caller message also cancels the hang-up.
+        if getattr(event.item, "role", None) == "user":
+            cancel_check_in()
 
 
 @server.rtc_session()
