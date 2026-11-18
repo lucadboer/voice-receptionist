@@ -15,7 +15,7 @@ You need:
 
 ```bash
 cp .env.example .env    # paste the two keys
-make setup              # install Python and admin UI dependencies
+make setup              # install backend and frontend dependencies
 make call               # talk to Riley with your microphone (headphones help)
 ```
 
@@ -37,7 +37,7 @@ Things to try on a call:
 - "Can I talk to a real person?"
 - In the admin UI, change the name and the voice and turn off `transfer_to_human`. Call again and ask for a person.
 
-Bookings are saved to `data/bookings.json`. Delete the file to free the slots again.
+Bookings are saved to `backend/data/bookings.json`. Delete the file to free the slots again.
 
 ## What I like about LiveKit
 
@@ -58,16 +58,17 @@ admin UI ── API ── config.json ── read at the start of every call
 
 | Path | What it is |
 |---|---|
-| `agent.py` | Entrypoint: reads the config, builds the session, handles silence and hang-up |
-| `receptionist/agent.py` | The agent: fixed greeting, emergency check before the model |
-| `receptionist/tools.py` | The five tools and what one call remembers between them |
-| `receptionist/prompt.py` | The call rules that are always added to the operator's instructions |
-| `receptionist/guardrails.py` | The emergency patterns and the fixed safety line |
-| `receptionist/schedule.py` | Service area, open slots, bookings (JSON files in `data/`) |
-| `receptionist/config.py` | Config schema, load and save |
-| `api/server.py` | Three endpoints for the admin UI |
-| `admin/` | One React page (Vite, TypeScript) |
-| `tests/` and `evals/` | Unit tests without keys, and evals against the real model |
+| `backend/agent.py` | Entrypoint: reads the config, builds the session, handles silence and hang-up |
+| `backend/receptionist/agent.py` | The agent: fixed greeting, emergency check before the model |
+| `backend/receptionist/tools.py` | The five tools and what one call remembers between them |
+| `backend/receptionist/prompt.py` | The call rules that are always added to the operator's instructions |
+| `backend/receptionist/guardrails.py` | The emergency patterns and the fixed safety line |
+| `backend/receptionist/schedule.py` | Service area, open slots, bookings (JSON files in `backend/data/`) |
+| `backend/receptionist/config.py` | Config schema, load and save |
+| `backend/api/server.py` | Three endpoints for the admin UI |
+| `backend/tests/` | Unit tests, no keys needed |
+| `backend/evals/` | Evals against the real model |
+| `frontend/` | The admin UI: one React page (Vite, TypeScript) |
 
 **The use case.** A home services company loses money when a call goes to voicemail. The call needs a lookup, an action and a handoff, so the tools come naturally: `check_service_area`, `find_available_slots`, `book_appointment`, `transfer_to_human` and LiveKit's `end_call`. It also has a real safety case: a caller who smells gas should not be offered an appointment.
 
@@ -90,7 +91,7 @@ admin UI ── API ── config.json ── read at the start of every call
 - **Call rules the operator cannot remove.** The admin UI edits the instructions. The phone style and the safety rules are added by code and shown read-only in the UI.
 - **Prompt only.** No prices, no repair advice, staying in role and saying she is an AI when asked. The evals check these.
 
-**Config that applies to the next call.** The config is read at the start of every call, never at import time. The committed defaults are in `config.default.json`. The admin UI writes `config.json`, which git ignores.
+**Config that applies to the next call.** The config is read at the start of every call, never at import time. The committed defaults are in `backend/config.default.json`. The admin UI writes `backend/config.json`, which git ignores.
 
 **Easy to extend.** A new tool is one function with `@function_tool` and one line in `all_tools()`. The admin UI builds its checkboxes from the API, so the tool shows up there with no UI change. A new voice is one line in `VOICES`.
 
@@ -116,7 +117,7 @@ With a voice agent, the hard question is not "does it work today". It is "can I 
 - **A speech check on every reply.** No markdown, no digits, at most 50 words, and at most two agent lines per caller turn. A reply can be correct and still be unspeakable.
 - **One simulated caller.** A second model plays a caller for a whole conversation, and the eval checks the booking at the end.
 - **One spoken eval.** A voice says the caller's lines, the real speech-to-text transcribes them, and the agent gets that transcript.
-- **Repeats and live config.** `uv run pytest evals --runs 5` repeats every eval. `EVAL_CONFIG=config.json make evals` checks the config saved in the admin UI.
+- **Repeats and live config.** From `backend/`, `uv run pytest evals --runs 5` repeats every eval. `EVAL_CONFIG=config.json make evals` checks the config saved in the admin UI.
 
 **What the evals found.** The first full run found four defects in my own agent, all fixed: a tool switched off in the admin UI was still attempted, "911" was written in digits, stray text came out after the goodbye, and the agent dropped its name when asked who it was.
 

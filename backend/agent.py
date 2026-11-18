@@ -1,4 +1,4 @@
-"""Worker entrypoint. Run it with `lk agent console`, `lk agent dev` or `python agent.py console`."""
+"""Worker entrypoint. Run it from this folder with `lk agent console` (or `make call` from the repo root)."""
 
 import asyncio
 

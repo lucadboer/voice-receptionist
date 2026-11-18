@@ -1,6 +1,6 @@
 """Shared setup for the evals: the real model, a fixed date, and a speech check on every agent reply.
 
-Run with `uv run pytest evals`. `--runs 5` repeats every eval five times.
+Run from `backend/` with `uv run pytest evals`. `--runs 5` repeats every eval five times.
 `EVAL_CONFIG=config.json` evaluates the config saved by the admin UI instead of the default.
 """
 

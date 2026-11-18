@@ -14,7 +14,7 @@ type Options = {
   call_rules: string;
 };
 
-const API_DOWN = "Could not reach the API. Start it with: uv run uvicorn api.server:app --port 8000";
+const API_DOWN = "Could not reach the API. Start the API and this page together with: make admin";
 
 // FastAPI sends a string for our own errors and a list of field errors when validation fails.
 function errorMessage(detail: string | { loc: string[]; msg: string }[]): string {

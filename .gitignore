@@ -11,12 +11,12 @@ dist/
 .DS_Store
 
 # Runtime data written by the agent
-data/bookings.json
-data/bookings.tmp
+backend/data/bookings.json
+backend/data/bookings.tmp
 
 # Live agent config written by the admin UI (defaults are in config.default.json)
-config.json
-config.json.tmp
+backend/config.json
+backend/config.json.tmp
 
 # Audio and reports saved by `lk agent console --record`
 console-recordings/
