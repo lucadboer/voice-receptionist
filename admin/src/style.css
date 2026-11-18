@@ -1,0 +1,63 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f6f6f6;
+  color: #222;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+label {
+  display: block;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+input:not([type="checkbox"]),
+select,
+textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 8px;
+  font: inherit;
+  font-weight: normal;
+}
+
+fieldset {
+  margin-bottom: 16px;
+}
+
+fieldset label {
+  margin-bottom: 8px;
+  font-weight: normal;
+}
+
+pre {
+  white-space: pre-wrap;
+  background: #eaeaea;
+  padding: 12px;
+}
+
+button {
+  padding: 8px 24px;
+  font: inherit;
+}
+
+.hint {
+  color: #555;
+}
+
+.saved {
+  color: #17692b;
+}
+
+.error {
+  color: #b00020;
+  white-space: pre-wrap;
+}
