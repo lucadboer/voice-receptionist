@@ -27,7 +27,7 @@ make test               # 64 unit tests, no keys needed
 make evals              # 20 evals against the real model, about two minutes
 ```
 
-Everything runs on your machine. No LiveKit server or LiveKit account is needed. When a call ends, press `q` to leave the console.
+Everything runs on your machine. No LiveKit server or LiveKit account is needed. The CLI prints a notice that no LiveKit project is configured, and starts the agent anyway. When a call ends, press `q` to leave the console.
 
 Things to try on a call:
 
