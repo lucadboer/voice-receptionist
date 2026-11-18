@@ -1,4 +1,4 @@
-.PHONY: setup call admin test evals
+.PHONY: setup call admin test evals audio-check
 
 setup:  ## install the Python and admin UI dependencies
 	uv sync
@@ -15,3 +15,6 @@ test:  ## unit tests, no keys needed
 
 evals:  ## behavior evals against the real model, needs the LiveKit keys
 	uv run pytest evals -q
+
+audio-check:  ## speak a booking call through the real audio path, uses Inference credits
+	uv run python evals/audio_check.py
