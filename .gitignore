@@ -21,6 +21,7 @@ dist/
 
 # Runtime data written by the agent
 data/bookings.json
+data/bookings.tmp
 
 # Private working notes (API research for the build session)
 notes/
