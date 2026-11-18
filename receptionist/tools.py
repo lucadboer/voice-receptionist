@@ -182,6 +182,10 @@ async def transfer_to_human(ctx: RunContext[CallState], reason: str) -> None:
     ctx.session.shutdown()
 
 
+# A tool that cannot work without others. The API refuses a config that enables it alone.
+REQUIRES = {"book_appointment": {"check_service_area", "find_available_slots"}}
+
+
 def all_tools() -> list[FunctionTool]:
     """Every tool the agent can be given. A tool's id is its function name."""
     return [

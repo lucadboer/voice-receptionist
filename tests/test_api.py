@@ -44,6 +44,14 @@ def test_unknown_tool_is_rejected(client, tmp_path):
     assert not (tmp_path / "config.json").exists()
 
 
+def test_a_tool_without_the_tools_it_needs_is_rejected(client, tmp_path):
+    new = client.get("/api/config").json() | {"enabled_tools": ["book_appointment", "find_available_slots"]}
+    response = client.put("/api/config", json=new)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "book_appointment also needs: check_service_area"
+    assert not (tmp_path / "config.json").exists()
+
+
 def test_options_list_every_tool_and_voice(client):
     options = client.get("/api/options").json()
     assert [tool["name"] for tool in options["tools"]] == [tool.id for tool in all_tools()]

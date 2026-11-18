@@ -17,10 +17,16 @@ EMERGENCY_PATTERNS = [
     r"carbon monoxide|\bc\.? ?o\.? (alarm|detector)",
     r"\bsmok(e|ing)\b",
     r"\bspark(s|ing|ed)?\b",
-    r"\b(a|on|caught) fire\b|\bflames?\b",  # not "won't fire": that is a furnace that will not start
+    r"\b(a|on|caught) fire\b|\bflames\b",  # not "won't fire" or "pilot flame": those are everyday repairs
 ]
+# "No gas smell" and "I don't smell gas" are not emergencies. Looks at the three words before a match.
+NEGATION = re.compile(r"\b(no|not|never|without|\w+n['’]t)\W+(\w+\W+){0,2}$", re.IGNORECASE)
 
 
 def is_emergency(text: str) -> bool:
     """True when the caller describes a gas leak, carbon monoxide, smoke, fire or sparks."""
-    return any(re.search(pattern, text, re.IGNORECASE) for pattern in EMERGENCY_PATTERNS)
+    for pattern in EMERGENCY_PATTERNS:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            if not NEGATION.search(text[: match.start()]):
+                return True
+    return False

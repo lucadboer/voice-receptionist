@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from receptionist.config import VOICES, AgentConfig, load_config, save_config
 from receptionist.prompt import CALL_RULES
-from receptionist.tools import all_tools
+from receptionist.tools import REQUIRES, all_tools
 
 app = FastAPI(title="Receptionist config")
 
@@ -24,6 +24,10 @@ def put_config(config: AgentConfig) -> AgentConfig:
     unknown = [name for name in config.enabled_tools if name not in known]
     if unknown:
         raise HTTPException(422, f"Unknown tools: {', '.join(unknown)}")
+    for tool, needed in REQUIRES.items():
+        missing = needed - set(config.enabled_tools)
+        if tool in config.enabled_tools and missing:
+            raise HTTPException(422, f"{tool} also needs: {', '.join(sorted(missing))}")
     save_config(config)
     return config
 

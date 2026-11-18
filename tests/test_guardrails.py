@@ -18,6 +18,7 @@ from receptionist.guardrails import is_emergency
         "The dryer caught fire",
         "My water heater is on fire",
         "I can see flames behind the dryer",
+        "There's no heat and I smell gas",
     ],
 )
 def test_life_safety_phrases_match(text):
@@ -30,6 +31,8 @@ def test_life_safety_phrases_match(text):
         "My gas furnace won't start",
         "The furnace won't fire up",
         "The burner won't fire at all",
+        "The pilot flame on my water heater keeps going out. No gas smell or anything, I checked.",
+        "I don't smell gas, the stove just won't light",
         "My gas water heater is leaking",
         "The AC is blowing warm air",
         "Can I talk to a real person?",

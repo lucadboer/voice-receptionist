@@ -1,12 +1,3 @@
-# Private material: never commit (assessment PDF, handoff, prompts, notes)
-*.pdf
-HANDOFF.md
-PROMPT_NEW_SESSION.md
-PLANO.md
-CLAUDE.md
-PROGRESS.md
-LOOM_SCRIPT.md
-
 # Local environment and secrets
 .env
 .env.*
@@ -22,9 +13,6 @@ dist/
 # Runtime data written by the agent
 data/bookings.json
 data/bookings.tmp
-
-# Private working notes (API research for the build session)
-notes/
 
 # Live agent config written by the admin UI (defaults are in config.default.json)
 config.json
