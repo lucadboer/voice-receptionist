@@ -189,5 +189,6 @@ def all_tools() -> list[FunctionTool]:
         find_available_slots,
         book_appointment,
         transfer_to_human,
-        *EndCallTool(end_instructions="Say a short goodbye.").tools,
+        # No reply after the tool: the agent says goodbye in the same turn, and a second reply came out as fragments.
+        *EndCallTool(end_instructions=None).tools,
     ]

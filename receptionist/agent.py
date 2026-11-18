@@ -12,9 +12,11 @@ from receptionist.tools import all_tools
 
 class Receptionist(Agent):
     def __init__(self, config: AgentConfig, today: date) -> None:
+        tools = all_tools()
+        tools_off = [tool.id for tool in tools if tool.id not in config.enabled_tools]
         super().__init__(
-            instructions=build_instructions(config, today),
-            tools=[tool for tool in all_tools() if tool.id in config.enabled_tools],
+            instructions=build_instructions(config, today, tools_off),
+            tools=[tool for tool in tools if tool.id in config.enabled_tools],
         )
         self.greeting = build_greeting(config)
 
