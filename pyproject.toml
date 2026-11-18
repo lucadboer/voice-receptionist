@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A phone receptionist voice agent on LiveKit Agents, with a small admin UI and evals"
 requires-python = ">=3.13"
 dependencies = [
-    "livekit-agents==1.8.12",
+    "livekit-agents[anthropic,deepgram]==1.8.12",
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "python-dotenv>=1.0",

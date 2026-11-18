@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 from dotenv import load_dotenv
-from livekit.agents import AgentSession, APIConnectOptions, SessionConnectOptions, inference
+from livekit.agents import AgentSession
+from livekit.agents.llm import ChatContext
+from livekit.plugins import anthropic
 
 from agent import LLM_MODEL
 from receptionist.agent import Receptionist
@@ -21,12 +23,9 @@ from receptionist.tools import CallState
 load_dotenv()
 
 TODAY = date(2026, 11, 18)  # a Wednesday, so "tomorrow" is Thursday the 19th
-# A judge from another model family does not share the agent's blind spots or favor its wording.
-JUDGE_MODEL = "openai/gpt-5.4-mini"
+JUDGE_MODEL = "claude-sonnet-5-5"  # a stronger model than the agent's, so the judge does not share its blind spots
 CONFIG_PATH = Path(os.getenv("EVAL_CONFIG", DEFAULT_PATH))
 MAX_WORDS = 50  # the booking read-back, the longest turn, is about 40 words
-# The free plan allows 100 model requests a minute. Wait for the next minute instead of failing an eval on a 429.
-RETRY_RATE_LIMITS = SessionConnectOptions(llm_conn_options=APIConnectOptions(max_retry=6, retry_interval=10))
 
 
 def pytest_addoption(parser):
@@ -41,9 +40,9 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(autouse=True)
-def livekit_keys():
-    if not (os.getenv("LIVEKIT_API_KEY") and os.getenv("LIVEKIT_API_SECRET")):
-        pytest.skip("the evals call a real model on LiveKit Inference: set LIVEKIT_API_KEY and LIVEKIT_API_SECRET")
+def api_key():
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        pytest.skip("the evals call a real model: set ANTHROPIC_API_KEY")
 
 
 def assert_speakable(text):
@@ -67,10 +66,7 @@ def state(tmp_path):
 @pytest.fixture
 async def start_call(config, state):
     """Gives a function that starts a call and returns the session. Pass a changed config to test a variant."""
-    async with (
-        inference.LLM(LLM_MODEL) as model,
-        AgentSession(llm=model, userdata=state, conn_options=RETRY_RATE_LIMITS) as session,
-    ):
+    async with anthropic.LLM(model=LLM_MODEL) as model, AgentSession(llm=model, userdata=state) as session:
 
         async def start(call_config=config):
             await session.start(Receptionist(call_config, TODAY), capture_run=True)
@@ -90,5 +86,18 @@ async def start_call(config, state):
 
 @pytest.fixture
 async def judge():
-    async with inference.LLM(JUDGE_MODEL) as model:
-        yield model
+    """Gives a function that asks a second model whether the last reply of a turn does what the intent says."""
+    async with anthropic.LLM(model=JUDGE_MODEL) as model:
+
+        async def check(result, intent):
+            reply = result.expect[-1].is_message(role="assistant").event().item.text_content
+            chat = ChatContext()
+            chat.add_message(
+                role="system",
+                content="You grade one reply from a phone agent. Answer PASS or FAIL, then one sentence saying why.",
+            )
+            chat.add_message(role="user", content=f"The reply must do this: {intent}\n\nThe reply: {reply}")
+            verdict = (await model.chat(chat_ctx=chat).collect()).text
+            assert verdict.strip().upper().startswith("PASS"), f"{verdict}\nreply: {reply!r}"
+
+        yield check

@@ -21,7 +21,7 @@ from receptionist import schedule
 
 logger = logging.getLogger("receptionist")
 
-Weekday = Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+Day = Literal["soonest", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 TRANSFER_LINE = "Okay, I'm connecting you with someone on our team now."
 
@@ -36,6 +36,7 @@ class CallState:
     service: str | None = None  # from the last slot lookup, saved with the booking
     pending_booking: dict | None = None  # details read back, waiting for the caller's yes
     read_back_turn: int = 0  # caller messages in the history when the read-back was given
+    filler_turn: int = 0  # the caller turn that last got a "let me check" line
     emergency: bool = False  # set by the emergency guardrail; blocks booking
 
 
@@ -45,8 +46,10 @@ def caller_turns(ctx: RunContext[CallState]) -> int:
 
 
 def say_filler(ctx: RunContext[CallState], lines: list[str]) -> None:
-    """Say a short line while the model writes its answer, unless the agent already spoke this turn."""
-    if ctx.session.history.messages()[-1].role == "user":
+    """Say a short line while the model writes its answer, at most once per caller turn."""
+    turn = caller_turns(ctx)
+    if ctx.userdata.filler_turn != turn:  # two lookups can run in the same turn
+        ctx.userdata.filler_turn = turn
         ctx.session.say(random.choice(lines))
 
 
@@ -72,7 +75,7 @@ async def check_service_area(ctx: RunContext[CallState], zip_code: str) -> dict:
 async def find_available_slots(
     ctx: RunContext[CallState],
     service: Literal["heating", "cooling", "plumbing"],
-    preferred_day: Weekday | None = None,
+    preferred_day: Day,
 ) -> dict:
     """Look up open visit times in the next seven days.
 
@@ -80,7 +83,7 @@ async def find_available_slots(
 
     Args:
         service: The kind of problem.
-        preferred_day: Only a weekday the caller named, never today's. Leave it null for the soonest times.
+        preferred_day: A weekday only if the caller named one, never today's. Otherwise "soonest".
     """
     state = ctx.userdata
     state.service = service
@@ -94,7 +97,7 @@ async def find_available_slots(
             for slot in (on_day or slots)[:3]
         ],
     }
-    if preferred_day and not on_day:
+    if preferred_day != "soonest" and not on_day:
         result["preferred_day_available"] = False
     return result
 

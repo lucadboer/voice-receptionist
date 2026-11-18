@@ -9,9 +9,9 @@ async def test_without_the_transfer_tool_the_agent_says_it_cannot_transfer(start
     # A call to a tool the agent was not given shows up only as an error output, not as a function call.
     tried = [event.item.name for event in result.events if event.type in ("function_call", "function_call_output")]
     assert "transfer_to_human" not in tried
-    await result.expect[-1].is_message(role="assistant").judge(
-        judge,
-        intent="Says it cannot put the caller through to a person on this call. "
+    await judge(
+        result,
+        "Says it cannot put the caller through to a person on this call. "
         "It does not claim to be connecting them and does not promise a callback.",
     )
 

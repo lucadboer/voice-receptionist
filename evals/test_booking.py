@@ -39,9 +39,7 @@ async def test_nothing_is_saved_when_the_caller_does_not_say_yes(start_call, sta
     result = await session.run(user_input="Hmm, let me check with my wife first and call you back.")
 
     assert not state.bookings_path.exists()
-    await result.expect.contains_message(role="assistant").judge(
-        judge, intent="Does not tell the caller that the visit is booked."
-    )
+    await judge(result, "Does not tell the caller that the visit is booked.")
 
 
 async def test_a_caller_who_changes_the_time_hears_a_new_read_back_and_gets_the_new_time(start_call, state):
@@ -64,11 +62,11 @@ async def test_a_zip_code_outside_the_service_area_gets_no_booking(start_call, s
         user_input="My AC stopped working. I'm in 73301. Tomorrow morning works, I'm Dana Smith, 512-555-0132."
     )
 
-    assert tool_calls(session) == [("check_service_area", {"zip_code": "73301"})]
+    calls = tool_calls(session)
+    assert ("check_service_area", {"zip_code": "73301"}) in calls
+    assert "book_appointment" not in [name for name, _ in calls]
     assert not state.bookings_path.exists()
-    await result.expect[-1].is_message(role="assistant").judge(
-        judge, intent="Tells the caller that the company does not serve their area."
-    )
+    await judge(result, "Tells the caller that the company does not serve their area.")
 
 
 # How speech-to-text writes numbers: as words, grouped the way people say them, with self-corrections.

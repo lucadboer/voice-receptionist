@@ -3,9 +3,10 @@
 import json
 from datetime import datetime
 
-from livekit.agents import inference, llm
+from livekit.agents import llm
+from livekit.plugins import anthropic
 
-CALLER_MODEL = "openai/gpt-5.4-mini"  # not the agent's model, so the caller does not mirror the agent
+CALLER_MODEL = "claude-sonnet-5-5"  # not the agent's model, so the caller does not mirror the agent
 CALLER = """You are on the phone with the receptionist of a heating and plumbing company. Your water heater is leaking
 and you want a technician to come out. An afternoon visit suits you best.
 Your name is Jordan Lee, your zip code is seven eight seven four five, and your phone number is
@@ -26,7 +27,7 @@ async def caller_line(caller, session):
 
 async def test_a_simulated_caller_ends_up_with_an_afternoon_booking(start_call, state):
     session = await start_call()
-    async with inference.LLM(CALLER_MODEL) as caller:
+    async with anthropic.LLM(model=CALLER_MODEL) as caller:
         for _ in range(MAX_TURNS):
             result = await session.run(user_input=await caller_line(caller, session))
             if any(event.type == "function_call" and event.item.name == "end_call" for event in result.events):

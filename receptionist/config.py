@@ -9,13 +9,13 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PATH = ROOT / "config.default.json"  # committed defaults
 LIVE_PATH = ROOT / "config.json"  # written by the admin UI, gitignored
 
-# LiveKit Inference voices as "provider/model:voice". The string goes straight into the session's tts.
+# Deepgram Aura-2 voices. The id goes straight into the session's tts.
 VOICES = {
-    "cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc": "Jacqueline (Cartesia), confident American female",
-    "cartesia/sonic-3:a167e0f3-df7e-4d52-a9c3-f949145efdab": "Blake (Cartesia), energetic American male",
-    "deepgram/aura-2:athena": "Athena (Deepgram), smooth professional female",
-    "deepgram/aura-2:odysseus": "Odysseus (Deepgram), calm professional male",
-    "inworld/inworld-tts-2:Ashley": "Ashley (Inworld), warm American female",
+    "aura-2-athena-en": "Athena, calm and professional (female)",
+    "aura-2-thalia-en": "Thalia, clear and energetic (female)",
+    "aura-2-andromeda-en": "Andromeda, casual and expressive (female)",
+    "aura-2-odysseus-en": "Odysseus, calm and professional (male)",
+    "aura-2-apollo-en": "Apollo, confident and casual (male)",
 }
 
 

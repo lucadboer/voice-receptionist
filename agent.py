@@ -11,7 +11,9 @@ from livekit.agents import (
     JobContext,
     UserStateChangedEvent,
     cli,
+    inference,
 )
+from livekit.plugins import anthropic, deepgram
 
 from receptionist.agent import Receptionist
 from receptionist.config import load_config
@@ -19,9 +21,9 @@ from receptionist.tools import CallState
 
 load_dotenv()
 
-# All three run on LiveKit Inference, so the LiveKit keys are the only keys needed.
-STT_MODEL = "deepgram/nova-3:en"  # sends the final transcript about 0.4 s after the caller stops; Flux held it for over a second
-LLM_MODEL = "google/gemma-4-31b-it"  # lowest time to first token of the six models measured
+# Claude is the LLM. Deepgram does speech-to-text and the voice (the voice id comes from the config).
+LLM_MODEL = "claude-haiku-5-5"
+STT_MODEL = "nova-3"
 
 STILL_THERE_LINE = "Are you still there?"
 SILENCE_GOODBYE = "I'll let you go for now. Call us back anytime. Bye."
@@ -65,12 +67,16 @@ async def entrypoint(ctx: JobContext) -> None:
     config = load_config()  # read on every call, so a save in the admin UI applies to the next call
     state = CallState()
     session = AgentSession(
-        stt=STT_MODEL,
-        llm=LLM_MODEL,
-        tts=config.voice,
+        stt=deepgram.STT(model=STT_MODEL),
+        llm=anthropic.LLM(model=LLM_MODEL),
+        tts=deepgram.TTS(model=config.voice),
         userdata=state,
-        # Half a second of silence before a turn can end, so a caller can pause while dictating a number.
-        turn_handling={"endpointing": {"min_delay": 0.5}},
+        turn_handling={
+            # LiveKit's turn detector, the version that runs on this machine and needs no cloud account.
+            "turn_detection": inference.TurnDetector(version="v1-mini"),
+            # Half a second of silence before a turn can end, so a caller can pause while dictating a number.
+            "endpointing": {"min_delay": 0.5},
+        },
     )
     hang_up_on_silence(session)
 

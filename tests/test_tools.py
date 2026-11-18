@@ -73,7 +73,7 @@ async def test_zip_code_outside_the_area_clears_the_last_one(ctx):
 async def test_one_filler_line_per_caller_turn(ctx):
     caller_says(ctx, "It's 78704")
     await check_service_area(ctx, "78704")
-    await find_available_slots(ctx, "heating")
+    await find_available_slots(ctx, "heating", "soonest")
     assert len(ctx.session.said) == 1
 
     caller_says(ctx, "Anything on Friday?")
@@ -148,7 +148,7 @@ async def test_reworded_issue_saves_what_was_read_back(ctx):
 
 async def test_confirmed_booking_is_saved_once(ctx):
     await check_service_area(ctx, "78704")
-    await find_available_slots(ctx, "heating")
+    await find_available_slots(ctx, "heating", "soonest")
     result = await ask_to_book(ctx)
     assert result["status"] == "needs_confirmation"
     assert result["read_back"] == (
