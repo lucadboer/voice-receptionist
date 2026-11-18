@@ -6,7 +6,7 @@ Riley answers the phone for a small heating and plumbing company when the office
 
 ## Setup (under 5 minutes)
 
-You need [uv](https://docs.astral.sh/uv/), Node 20 or newer, the LiveKit CLI (`brew install livekit-cli`) and a LiveKit Cloud project. The free plan is enough.
+You need [uv](https://docs.astral.sh/uv/), Node 20.19 or newer, the [LiveKit CLI](https://docs.livekit.io/reference/developer-tools/livekit-cli/#setup) (`brew install livekit-cli` on macOS) and a LiveKit Cloud project. The free plan is enough.
 
 ```bash
 cp .env.example .env    # paste the project URL, API key and API secret
@@ -18,7 +18,7 @@ In a second terminal:
 
 ```bash
 make admin              # admin UI at http://localhost:5173
-make test               # 60 unit tests, no keys needed, 3 seconds
+make test               # 64 unit tests, no keys needed, 3 seconds
 make evals              # 19 evals against the real model, about a minute
 make audio-check        # one booking call spoken through the real audio path
 ```
@@ -26,6 +26,8 @@ make audio-check        # one booking call spoken through the real audio path
 The three LiveKit values are the only keys. Speech-to-text, the LLM and the voice all run through LiveKit Inference. To use your own provider keys, replace the model strings in `agent.py` with plugin instances. It is one line each.
 
 No `lk` CLI? `uv run python agent.py console` also works. It is the older Python CLI and prints a deprecation notice.
+
+What it costs: the free plan includes $2.50 of inference credit a month. A three-minute call uses about 10 cents and one `make evals` run about 5 cents.
 
 Things to try on a call:
 
@@ -82,27 +84,27 @@ For a short, simple conversation, a speech-to-speech model gives the lowest late
 
 ### Models picked by measuring
 
-I timed six LLMs through LiveKit Inference from my machine. Gemma 4 31B gave its first output in about 0.8 seconds. The other five took 1.0 to 2.5 seconds. All six made the right tool call, so the fastest one won.
+I timed six LLMs through LiveKit Inference from my machine with `scripts/time_llms.py`. Gemma 4 31B gave its first output in about 0.8 seconds. The other five took 1.0 to 2.5 seconds. All six made the right tool call, so the fastest one won.
 
-The speech-to-text model mattered more. I started with Deepgram Flux. Scripted audio calls showed about 1.8 seconds between the caller's last word and Riley's first. The per-turn metrics showed where the time went. Flux has its own end-of-turn model and held the final transcript for about 1.2 seconds, and LiveKit's turn detector ran after that. Two end-of-turn checks in a row.
+The speech-to-text model mattered more. I started with Deepgram Flux. Scripted audio calls showed about 1.8 seconds between the caller's last word and Riley's first. The per-turn metrics that LiveKit attaches to each message showed where the time went. Flux has its own end-of-turn model and sends the final transcript only when that model decides the caller is done, about 1.2 seconds after they stop. That wait was most of the delay.
 
 With Deepgram Nova-3 the transcript arrives about 0.4 seconds after the caller stops, and the response time dropped to about 1.0 second. Nova-3 has no end-of-turn model of its own, so I raised the minimum silence before a turn can end from 0.3 to 0.5 seconds. That leaves a caller room to pause in the middle of a phone number. It cost nothing I could measure, because the model is already writing its answer by then.
 
-These numbers come from scripted calls with synthetic caller audio, run from my laptop. A real phone line adds its own delay.
+These numbers are medians over five caller turns per setup, from scripted calls with `lk agent debugger --audio`, run from my laptop. The caller audio is synthetic and clean. A real phone line adds its own delay.
 
 ### Sounding like a phone call
 
 - **The greeting is fixed text, not a model reply.** It starts at once and never varies.
 - **Short turns.** The call rules ask for one or two sentences and one question at a time, with no lists or symbols.
 - **Tools answer in spoken form.** A slot comes back as "tomorrow at two thirty in the afternoon" and a phone number as "five one two, five five five, zero one three two". The model does not convert times or digits, so it cannot get them wrong.
-- **A short line when a lookup starts.** A turn with a tool costs two model round trips. The tool says "Let me pull up the schedule." from code while the model writes the answer. There is at most one such line per caller turn. Two in a row sounded scripted.
+- **A short line when a lookup starts.** A turn with a tool costs two model round trips. The tool says "Let me pull up the schedule." from code while the model writes the answer. There is at most one such line per caller turn, and a call rule tells the model not to add its own. Two in a row sounded scripted.
 - **Turn-taking is LiveKit's default.** The turn detector, interruptions and preemptive generation are on as shipped. I could not out-tune them in a day.
 - **Silence.** After about fifteen quiet seconds Riley asks "Are you still there?". After ten more she says goodbye and hangs up.
 - **The call ends.** Riley says goodbye and hangs up through `end_call`. A transfer and a silence timeout end the call the same way.
 
 ### Guardrails: code where it must not fail, prompt where judgment is needed
 
-- **Emergency.** `guardrails.py` matches a gas smell, carbon monoxide, smoke, fire or sparks. The check runs in `llm_node`, just before the model would be called. On a match the model is not called at all. Riley says a fixed safety line, and booking is blocked for the rest of the call. The line is said once per call, because a caller who is already outside needs answers and not the same warning again.
+- **Emergency.** `guardrails.py` matches a gas smell, carbon monoxide, smoke, fire or sparks, and skips a match the caller negated, like "no gas smell". The check runs in `llm_node`, just before the model would be called. On a match the model is not called at all. Riley says a fixed safety line, and booking is blocked for the rest of the call. The line is said once per call, because a caller who is already outside needs answers and not the same warning again.
 - **Why `llm_node` and not `on_user_turn_completed`.** The hook looks like the natural place. But `session.run()`, console text mode and room text chat all skip it, so a guardrail there cannot be tested end to end and does not cover typed input. `llm_node` runs on every path.
 - **Two-step booking.** The first call to `book_appointment` saves nothing and returns the details to read back. The booking is written only on a second call, with the same name, number and time, and only after the caller has spoken again. The model cannot say yes for the caller in the same turn, and what gets saved is what was read back.
 - **Call rules the operator cannot remove.** The admin UI edits the instructions. The phone style and the safety rules are appended by code and shown read-only in the UI. An operator can change what Riley does, but not make her read markdown aloud or drop the emergency rule.
@@ -120,9 +122,11 @@ These numbers come from scripted calls with synthetic caller audio, run from my 
 
 Adding a tool is one function with `@function_tool` and one line in `all_tools()`. The admin UI builds its checkboxes from the API, so the new tool shows up there with no UI change, and the config decides which calls get it. A new voice is one line in `VOICES`.
 
+Some tools need others: a booking needs the zip code check and a slot. `REQUIRES` in `tools.py` says so, and the API refuses to save a config that breaks it. When a tool is switched off, the prompt tells the model by name, because the operator's instructions may still mention it.
+
 ### Left out on purpose
 
-No database, no auth, no deployment and no UI styling beyond what makes the page readable. The brief asked for that. There is also no real phone number: `transfer_to_human` says its line and ends the local call, and a comment marks where the SIP transfer goes.
+No database, no auth, no deployment and no UI styling beyond what makes the page readable. The brief asked for that. There is also no real phone number: `transfer_to_human` says its line and ends the local call, and a comment marks where the SIP transfer goes. The bookings file has no lock, so two workers could book the same slot. In a real system the scheduling backend owns that check.
 
 ## What did not work at first
 
@@ -130,6 +134,8 @@ No database, no auth, no deployment and no UI styling beyond what makes the page
 - **The transfer line got cut off.** The caller kept talking, the line was interrupted, and the call ended in silence. That line is now not interruptible.
 - **The first speech-to-text model made every answer slow.** See "Models picked by measuring".
 - **The model announced a transfer and then did not make it.** The tool description and one call rule now say the tool speaks its own handoff line.
+- **The emergency check fired on a pilot light.** "The pilot flame keeps going out, no gas smell" matched two patterns and got the evacuation line. The patterns now ignore a single "flame" and anything the caller negated.
+- **Riley promised a callback she could not arrange.** With the transfer tool off she said "the team will follow up" without taking a number. The rule now says to state what she cannot do and promise nothing.
 - **The silence timer hung up on a caller who had answered.** In typed mode, a reply to "Are you still there?" did not stop the countdown, because a typed message does not change the user state. Now any caller message cancels it.
 - **"For furnace won't turn on."** The read-back was built from the model's wording of the problem. The argument description now asks for a phrase that reads well after "for".
 
@@ -138,7 +144,9 @@ No database, no auth, no deployment and no UI styling beyond what makes the page
 - **A real phone line.** A SIP trunk, the caller's number from the SIP headers instead of asking for it, and a real transfer: a cold one with SIP REFER, or a warm one where the agent briefs the person before connecting the caller.
 - **Speech-to-speech as an option.** The same config and the same evals, run against a realtime model, to compare latency, task success and cost on this exact call.
 - **A latency budget in CI.** I measured by hand. A scripted audio run that fails when the median response time goes over a limit would keep it honest.
-- **Patience while the caller dictates a number.** People pause in the middle of a phone number. The agent should wait longer on that turn than on a yes or no.
+- **Patience while the caller dictates a number.** People pause in the middle of a phone number. The agent should wait longer on that turn than on a yes or no. I would also try Flux again with its own end-of-turn model as the only turn detector, and compare.
+- **Urgent problems.** A burst pipe should go to a person at once. The instructions now say so, but I have no eval for it yet.
+- **Taking a message.** When Riley cannot transfer, she should take a name and number so the team really can call back.
 - **Per-tenant config and tools.** The JSON file becomes a store keyed by tenant, and tools come from MCP servers so each tenant brings its own.
 - **Audio evals at scale.** Recorded calls with noise, accents and phone-line audio, not only clean synthetic speech.
 
@@ -148,12 +156,12 @@ With a voice agent, the hard question is not "does it work today". It is "can I 
 
 ### What is in the suite
 
-- **Unit tests (`make test`).** 60 tests with no keys and no model. They cover the rules that live in code: the emergency patterns, the two-step booking, config validation and the API.
+- **Unit tests (`make test`).** 64 tests with no keys and no model. They cover the rules that live in code: the emergency patterns, the two-step booking, config validation and the API.
 - **Behavior evals (`make evals`).** 19 evals that drive the real agent against the real model, in text. Each one asserts on tool calls, their arguments and what was saved. An LLM judge from a different model family checks only what code cannot, like "does not tell the caller the visit is booked".
   - *Booking:* the full flow, no yes at the read-back, a changed time, a zip code outside the area, and numbers the way speech-to-text writes them ("seven eight seven oh four", "five twelve, five five five, oh one thirty two").
   - *Call rules:* a gas smell (the code layer), an emergency the patterns miss (the prompt layer), a transfer, a price question, a prompt injection, and "am I talking to a real person".
   - *Operator config:* a tool switched off in the admin UI, and a new agent name.
-- **A speech check on every reply.** Every agent message in every eval must end like a sentence, have no markdown or lists, no run of digits a voice may read as one big number, and at most 50 words. A reply can be correct and still be unspeakable.
+- **A speech check on every reply.** Every agent message in every eval must end like a sentence, have no markdown or lists, no run of digits a voice may read as one big number, and at most 50 words. A caller turn may get at most two agent lines: one short line from a tool, then the answer. A reply can be correct and still be unspeakable.
 - **One simulated caller.** A second model plays a caller with a goal and gives each fact only when asked. The eval checks how the call ends: one booking, with the right name, number and an afternoon slot. The scripted evals check single decisions. This one checks a whole conversation.
 - **Repeats.** `uv run pytest evals --runs 5` runs every eval five times, because model answers vary.
 - **The live config.** `EVAL_CONFIG=config.json make evals` runs the suite against the config saved in the admin UI, so an operator can check a prompt edit before taking calls.

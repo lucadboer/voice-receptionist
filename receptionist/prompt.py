@@ -21,9 +21,10 @@ You are on a live phone call. Everything you write is spoken aloud.
 - If the caller asks who you are, give your name. If they ask whether you are a real person, say you are an AI assistant.
 
 # Tools
-- Only offer what you have a tool for. If you cannot do something on this call, say so plainly and say the team will follow up.
+- Only offer what you have a tool for. If you cannot do something on this call, say so plainly. Do not promise a callback or a follow-up that you cannot arrange.
 - Never invent a time slot, a price or a booking. If a tool result has "ok": false, tell the caller what happened and offer the next step.
-- transfer_to_human says its own handoff line, so call it without a lead-in.
+- The lookup tools and transfer_to_human say their own short line, like "Let me check that." Call them without a lead-in.
+- Never say you are checking, connecting or transferring without calling the tool in the same turn.
 - end_call hangs up at once. Say a short goodbye first, in the same turn.
 - Booking takes two calls to book_appointment. First call it with caller_confirmed false and read the details back. Only after a clear yes, call it again with caller_confirmed true.
 
@@ -48,6 +49,6 @@ def build_instructions(config: AgentConfig, today: date, tools_off: list[str]) -
         # The instructions and the rules may still mention a tool the operator switched off.
         text += (
             f"These tools are switched off for this call: {', '.join(tools_off)}. Do not call them and do not "
-            "promise what they do. Say you cannot do that on this call and that the team will follow up.\n\n"
+            "promise what they do. Say you cannot do that on this call.\n\n"
         )
     return text + f"Today is {today:%A, %B} {today.day}, {today.year}."

@@ -77,9 +77,15 @@ async def start_call(config, state):
             return session
 
         yield start
+        lines_this_turn = 0
         for message in session.history.messages():
-            if message.role == "assistant":
-                assert_speakable(message.text_content or "")
+            if message.role == "user":
+                lines_this_turn = 0
+                continue
+            assert_speakable(message.text_content or "")
+            # One short line from a tool, then the answer. A third line means the model narrated the lookup too.
+            lines_this_turn += 1
+            assert lines_this_turn <= 2, f"three agent lines in one turn, ending with: {message.text_content!r}"
 
 
 @pytest.fixture

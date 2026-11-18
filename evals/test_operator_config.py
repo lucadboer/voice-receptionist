@@ -1,7 +1,7 @@
 """Edits an operator makes in the admin UI reach the model on the next call."""
 
 
-async def test_without_the_transfer_tool_the_agent_says_the_team_will_follow_up(start_call, config, judge):
+async def test_without_the_transfer_tool_the_agent_says_it_cannot_transfer(start_call, config, judge):
     config.enabled_tools = [tool for tool in config.enabled_tools if tool != "transfer_to_human"]
     session = await start_call(config)
     result = await session.run(user_input="Can I just talk to a real person, please?")
@@ -11,8 +11,8 @@ async def test_without_the_transfer_tool_the_agent_says_the_team_will_follow_up(
     assert "transfer_to_human" not in tried
     await result.expect[-1].is_message(role="assistant").judge(
         judge,
-        intent="Says it cannot put the caller through to a person on this call and that someone from the team "
-        "will follow up. It does not claim to be connecting them.",
+        intent="Says it cannot put the caller through to a person on this call. "
+        "It does not claim to be connecting them and does not promise a callback.",
     )
 
 
