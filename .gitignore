@@ -29,3 +29,6 @@ notes/
 # Live agent config written by the admin UI (defaults are in config.default.json)
 config.json
 config.json.tmp
+
+# Audio and reports saved by `lk agent console --record`
+console-recordings/
