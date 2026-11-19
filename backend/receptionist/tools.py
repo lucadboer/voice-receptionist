@@ -50,7 +50,8 @@ def say_filler(ctx: RunContext[CallState], lines: list[str]) -> None:
     turn = caller_turns(ctx)
     if ctx.userdata.filler_turn != turn:  # two lookups can run in the same turn
         ctx.userdata.filler_turn = turn
-        ctx.session.say(random.choice(lines))
+        # Not interruptible: a noise during this short line would cancel the answer that follows it.
+        ctx.session.say(random.choice(lines), allow_interruptions=False)
 
 
 @function_tool
