@@ -1,11 +1,12 @@
 import json
 import uuid
+from array import array
 from datetime import date
 
 from livekit.agents import AgentSession, llm
 from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS
 
-from receptionist.agent import Receptionist
+from receptionist.agent import Receptionist, voice_start
 from receptionist.config import DEFAULT_PATH, load_config
 from receptionist.guardrails import EMERGENCY_LINE
 from receptionist.prompt import build_greeting
@@ -128,3 +129,14 @@ def test_a_disabled_tool_is_not_given_to_the_agent():
         "transfer_to_human",
         "end_call",
     }
+
+
+def test_voice_start_skips_the_tick_and_keeps_a_pre_roll():
+    rate = 24000
+    tick, silence, voice = [200] * 240, [0] * 7200, [9000] * 100  # 10 ms tick, 300 ms of nothing, then the voice
+    samples = array("h", tick + silence + voice)
+    assert voice_start(samples, rate) == 240 + 7200 - 2400  # 100 ms before the voice
+
+
+def test_voice_start_waits_while_there_is_only_lead_in():
+    assert voice_start(array("h", [200] * 240 + [0] * 1000), 24000) is None

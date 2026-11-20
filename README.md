@@ -64,6 +64,7 @@ admin UI ── API ── config.json ── read at the start of every call
 - Tools answer in spoken form: "tomorrow at two thirty in the afternoon". The model does not convert times or numbers.
 - A lookup or a booking says one short line from code ("Let me pull up the schedule.") while the model writes the answer.
 - When the caller cuts in, Riley stops. The SDK would pause and resume instead, but the local console does not pause audio, so she kept talking over the caller. I found it by recording a call through a loopback audio device, and turned the pause off.
+- The voice puts a faint tick and a short silence before each reply. The agent trims that lead-in, so the first word comes clean and a little sooner.
 - The goodbye cannot be cut off. Callers say "thanks, bye" over it, and the call used to end in silence.
 - After a long silence Riley asks "Are you still there?", then says goodbye and hangs up.
 
