@@ -2,7 +2,7 @@
 
 Riley answers the phone for a small heating and plumbing company when the office is busy, so no caller ends up in voicemail. She books a technician visit, hands the call to a person, and handles a gas leak safely. A one-page admin UI changes her instructions, name, greeting, voice and tools, and the next call uses the new settings.
 
-**Demo (5 min):** LOOM_LINK
+**Demo video:** https://www.loom.com/share/8835c52be7694f429e133944e1a0d4ee
 
 ## Setup (under 5 minutes)
 
@@ -19,7 +19,7 @@ In a second terminal:
 ```bash
 make admin              # admin UI at http://localhost:5173
 make test               # unit tests, no keys needed
-make evals              # 20 evals against the real model, about two minutes
+make evals              # 20 evals against the real model, two to three minutes
 ```
 
 Everything runs on your machine, with no LiveKit server or account. When a call ends, press `q` to leave the console.
