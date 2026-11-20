@@ -62,7 +62,9 @@ admin UI ── API ── config.json ── read at the start of every call
 - The greeting is fixed text, so it starts at once.
 - The call rules ask for one or two short sentences, one question at a time, and no digits or symbols.
 - Tools answer in spoken form: "tomorrow at two thirty in the afternoon". The model does not convert times or numbers.
-- A lookup says one short line from code ("Let me pull up the schedule.") while the model writes the answer.
+- A lookup or a booking says one short line from code ("Let me pull up the schedule.") while the model writes the answer.
+- When the caller cuts in, Riley stops. The SDK would pause and resume instead, but the local console does not pause audio, so she kept talking over the caller. I found it by recording a call through a loopback audio device, and turned the pause off.
+- The goodbye cannot be cut off. Callers say "thanks, bye" over it, and the call used to end in silence.
 - After a long silence Riley asks "Are you still there?", then says goodbye and hangs up.
 
 **Guardrails: code where it must not fail, prompt where judgment is needed.**
@@ -79,7 +81,7 @@ admin UI ── API ── config.json ── read at the start of every call
 
 - **Response time.** Answers start about a second and a half after the caller stops, and most of that is the LLM. I would try a faster model, or speech-to-speech, against the same evals.
 - **A real phone line.** A SIP trunk and a real transfer where the agent briefs the person first. Today `transfer_to_human` says its line and ends the local call.
-- **Patience with numbers.** People pause in the middle of a phone number. The agent should wait longer on that turn than on a yes or no.
+- **Patience with numbers.** People pause in the middle of a phone number. Today a turn that sounds unfinished gets a second and a half. A number should get more, without slowing down a yes or no.
 - **Audio evals at scale.** Recorded calls with noise, accents and phone-line audio.
 
 ## Why evals

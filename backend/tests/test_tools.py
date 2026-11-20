@@ -73,25 +73,30 @@ async def test_zip_code_outside_the_area_clears_the_last_one(ctx):
 async def test_one_filler_line_per_caller_turn(ctx):
     caller_says(ctx, "It's 78704")
     await check_service_area(ctx, "78704")
-    await find_available_slots(ctx, "heating", "soonest")
+    await find_available_slots(ctx, "heating", "soonest", "any")
     assert len(ctx.session.said) == 1
 
     caller_says(ctx, "Anything on Friday?")
-    await find_available_slots(ctx, "heating", "friday")
+    await find_available_slots(ctx, "heating", "friday", "any")
     assert len(ctx.session.said) == 2
 
 
 async def test_slots_on_the_preferred_day(ctx):
-    result = await find_available_slots(ctx, "plumbing", "friday")
+    result = await find_available_slots(ctx, "plumbing", "friday", "any")
     assert [slot["slot_id"] for slot in result["slots"]] == ["2026-11-20T09:00", "2026-11-20T11:30", "2026-11-20T14:30"]
     assert result["slots"][0]["spoken"] == "Friday at nine in the morning"
     assert "preferred_day_available" not in result
 
 
 async def test_preferred_day_without_slots_gives_the_soonest(ctx):
-    result = await find_available_slots(ctx, "cooling", "sunday")
+    result = await find_available_slots(ctx, "cooling", "sunday", "any")
     assert result["preferred_day_available"] is False
     assert [slot["slot_id"] for slot in result["slots"]] == ["2026-11-19T09:00", "2026-11-19T11:30", "2026-11-19T14:30"]
+
+
+async def test_slots_in_the_afternoon_only(ctx):
+    result = await find_available_slots(ctx, "cooling", "soonest", "afternoon")
+    assert [slot["slot_id"] for slot in result["slots"]] == ["2026-11-19T14:30", "2026-11-20T14:30", "2026-11-23T14:30"]
 
 
 async def test_booking_needs_the_service_area_check(ctx):
@@ -148,7 +153,7 @@ async def test_reworded_issue_saves_what_was_read_back(ctx):
 
 async def test_confirmed_booking_is_saved_once(ctx):
     await check_service_area(ctx, "78704")
-    await find_available_slots(ctx, "heating", "soonest")
+    await find_available_slots(ctx, "heating", "soonest", "any")
     result = await ask_to_book(ctx)
     assert result["status"] == "needs_confirmation"
     assert result["read_back"] == (

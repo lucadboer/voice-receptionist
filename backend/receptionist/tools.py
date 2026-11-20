@@ -15,7 +15,7 @@ from typing import Literal
 
 from livekit.agents import RunContext, function_tool
 from livekit.agents.beta import EndCallTool
-from livekit.agents.llm import FunctionTool
+from livekit.agents.llm import FunctionTool, Toolset
 
 from receptionist import schedule
 
@@ -77,6 +77,7 @@ async def find_available_slots(
     ctx: RunContext[CallState],
     service: Literal["heating", "cooling", "plumbing"],
     preferred_day: Day,
+    time_of_day: Literal["any", "morning", "afternoon"],
 ) -> dict:
     """Look up open visit times in the next seven days.
 
@@ -85,11 +86,14 @@ async def find_available_slots(
     Args:
         service: The kind of problem.
         preferred_day: A weekday only if the caller named one, never today's. Otherwise "soonest".
+        time_of_day: "morning" or "afternoon" only if the caller asked for one. Otherwise "any".
     """
     state = ctx.userdata
     state.service = service
     say_filler(ctx, ["Let me pull up the schedule.", "Let me see what we have open."])
     slots = schedule.open_slots(state.today, state.bookings_path)
+    if time_of_day != "any":
+        slots = [slot for slot in slots if (slot.hour < 12) == (time_of_day == "morning")]
     on_day = [slot for slot in slots if slot.strftime("%A").lower() == preferred_day]
     result = {
         "ok": True,
@@ -149,6 +153,7 @@ async def book_appointment(
     if not caller_confirmed:
         state.pending_booking = details
         state.read_back_turn = caller_turns(ctx)
+        say_filler(ctx, ["Got it, one moment."])
         read_back = (
             f"I have {name} down for {when}, for {issue}, "
             f"and the callback number is {schedule.spoken_digits(phone)}. Is that right?"
@@ -162,6 +167,7 @@ async def book_appointment(
     if (name.casefold(), phone, slot_id) != (pending["name"].casefold(), pending["phone"], pending["slot_id"]):
         return {"ok": False, "reason": "details_changed"}
 
+    say_filler(ctx, ["Perfect, I'm booking that now."])
     # Save what was read back, even if the model words the issue differently the second time.
     booking = {**pending, "created_at": datetime.now().isoformat(timespec="seconds")}
     schedule.save_booking(state.bookings_path, booking)
@@ -190,6 +196,12 @@ async def transfer_to_human(ctx: RunContext[CallState], reason: str) -> None:
 REQUIRES = {"book_appointment": {"check_service_area", "find_available_slots"}}
 
 
+async def finish_goodbye(event: Toolset.ToolCalledEvent) -> None:
+    """Let the goodbye play to the end. A caller who said "thanks, bye" over it cut it off, and the call ended in silence."""
+    if not event.ctx.speech_handle.interrupted:
+        event.ctx.disallow_interruptions()
+
+
 def all_tools() -> list[FunctionTool]:
     """Every tool the agent can be given. A tool's id is its function name."""
     return [
@@ -198,5 +210,5 @@ def all_tools() -> list[FunctionTool]:
         book_appointment,
         transfer_to_human,
         # No reply after the tool: the agent says goodbye in the same turn, and a second reply came out as fragments.
-        *EndCallTool(end_instructions=None).tools,
+        *EndCallTool(end_instructions=None, on_tool_called=finish_goodbye).tools,
     ]

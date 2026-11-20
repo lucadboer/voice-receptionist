@@ -74,10 +74,12 @@ async def entrypoint(ctx: JobContext) -> None:
         turn_handling={
             # LiveKit's turn detector, the version that runs on this machine and needs no cloud account.
             "turn_detection": inference.TurnDetector(version="v1-mini"),
-            # Half a second of silence before a turn can end, so a caller can pause while dictating a number.
-            "endpointing": {"min_delay": 0.5},
+            # Half a second of silence ends a turn that sounds finished. One that does not, like half a phone
+            # number, gets a second and a half. The default of 2.5 left a long silence after every number.
+            "endpointing": {"min_delay": 0.5, "max_delay": 1.5},
             # Interruptions by voice activity. The adaptive model needs a LiveKit Cloud account.
-            "interruption": {"mode": "vad"},
+            # No pause-and-resume: the local console cannot pause audio, so the agent kept talking over the caller.
+            "interruption": {"mode": "vad", "resume_false_interruption": False},
         },
     )
     hang_up_on_silence(session)
