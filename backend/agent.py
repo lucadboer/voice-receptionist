@@ -76,6 +76,8 @@ async def entrypoint(ctx: JobContext) -> None:
             "turn_detection": inference.TurnDetector(version="v1-mini"),
             # Half a second of silence before a turn can end, so a caller can pause while dictating a number.
             "endpointing": {"min_delay": 0.5},
+            # Interruptions by voice activity. The adaptive model needs a LiveKit Cloud account.
+            "interruption": {"mode": "vad"},
         },
     )
     hang_up_on_silence(session)
